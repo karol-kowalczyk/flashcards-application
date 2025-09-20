@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Karteikarten</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Firebase v8.10.0 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1 class="title">🗂️ Karteikarten </h1>
+            <div class="muted">Dev-Modus · keine Anmeldung</div>
+        </header>
+
+        <!-- Decks -->
+        <section id="viewDecks" class="view">
+            <div class="section-title">
+                <h2>📚 Deine Kurse</h2>
+                <div class="row">
+                    <button id="newCourseBtn" class="btn">+ Kurs</button>
+                    <button id="newDeckBtn" class="btn primary">+ Unterdeck</button>
+                </div>
+            </div>
+            <div id="decks" class="grid decks"></div>
+        </section>
+
+        <!-- Deck -->
+        <section id="viewDeck" class="view hidden">
+            <div class="section-title">
+                <div class="row deck-heading">
+                    <button id="backToDecks" class="btn">← Zurück</button>
+                    <div class="deck-heading-names">
+                        <h2 id="deckTitle" class="title"></h2>
+                        <span id="deckCourseTag" class="deck-course-tag hidden"></span>
+                        <span id="deckGroupTag" class="deck-group-tag hidden"></span>
+                        <span id="deckSubsectionTag" class="deck-subsection-tag hidden"></span>
+                    </div>
+                </div>
+                <div class="row deck-actions-row">
+                    <button id="learnBtn" class="btn primary">Lernen</button>
+                    <button id="changeCourseBtn" class="btn">Kurs wechseln</button>
+                    <button id="selectSubsectionBtn" class="btn">Abschnitt wählen</button>
+                    <button id="addSubsectionBtn" class="btn">+ Abschnitt</button>
+                    <button id="clearSubsectionBtn" class="btn hidden">Abschnitt verlassen</button>
+                    <button id="renameDeckBtn" class="btn">Umbenennen</button>
+                    <button id="deleteDeckBtn" class="btn danger" title="Deck löschen">🗑️</button>
+                </div>
+            </div>
+
+            <div class="card two">
+                <!-- Formular -->
+                <div>
+                    <h3>Karte hinzufügen / bearbeiten</h3>
+                    <form id="cardForm">
+                        <input type="hidden" id="cardId" />
+
+                        <label>Vorderseite</label>
+                        <div class="side-toggle" data-side="front">
+                            <button type="button" class="seg active" data-type="text">Text</button>
+                            <button type="button" class="seg" data-type="image">Bild</button>
+                        </div>
+                        <div class="front-inputs">
+                        <textarea id="frontText" placeholder="Frage…"></textarea>
+                        <div id="frontImageBox" class="paste-zone" tabindex="0" style="display:none">
+                                <div><strong>Bild einfügen</strong>
+                                    <p>Tippen zum Hochladen oder Fokus → ⌘/Ctrl+V</p>
+                                </div>
+                        </div>
+                        <input type="file" accept="image/*" id="frontImageInput" class="image-file-input" />
+                        <div id="frontPreview" class="preview"></div>
+                        </div>
+
+                        <label>Rückseite</label>
+                        <div class="side-toggle" data-side="back">
+                            <button type="button" class="seg active" data-type="text">Text</button>
+                            <button type="button" class="seg" data-type="image">Bild</button>
+                        </div>
+                        <div class="back-inputs">
+                        <textarea id="backText" placeholder="Antwort…"></textarea>
+                        <div id="backImageBox" class="paste-zone" tabindex="0" style="display:none">
+                                <div><strong>Bild einfügen</strong>
+                                    <p>Tippen zum Hochladen oder Fokus → ⌘/Ctrl+V</p>
+                                </div>
+                        </div>
+                        <input type="file" accept="image/*" id="backImageInput" class="image-file-input" />
+                        <div id="backPreview" class="preview"></div>
+                        </div>
+
+                        <div class="row end">
+                            <button type="button" id="resetForm" class="btn">Neu</button>
+                            <button type="submit" class="btn primary">Speichern</button>
+                        </div>
+                        <p class="hint">Screenshot: ⌘⇧4 → ⌘V (Windows: Win+Shift+S → Ctrl+V).</p>
+                    </form>
+                </div>
+
+                <!-- Kartenliste -->
+                <div>
+                    <div class="card-list-header">
+                        <h3>Karten</h3>
+                        <button id="toggleCardsBtn" class="btn">Liste anzeigen</button>
+                    </div>
+                    <div id="cardsWrap" class="card-list-collapsible hidden">
+                        <div id="cards" class="grid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lernen -->
+        <section id="viewLearn" class="view hidden">
+            <div class="section-title">
+                <div class="row">
+                    <button class="btn" id="backToDeck">← Zurück</button>
+                    <h2 id="learnDeckTitle" class="title"></h2>
+                </div>
+            </div>
+
+            <div class="card learn-card">
+                <div id="learnFace" class="learn-face"></div>
+                <div class="row">
+                    <button class="btn" id="flipBtn">Karte umdrehen</button>
+                    <button class="btn" id="nextBtn" style="display:none">Nächste</button>
+                </div>
+                <div class="learn-actions" id="knowBtns" style="display:none">
+                    <button class="btn pill good" id="btnGood">Gewusst</button>
+                    <button class="btn pill bad" id="btnBad">Nicht gewusst</button>
+                </div>
+                <div class="muted" id="learnProgress"></div>
+            </div>
+        </section>
+    </div>
+
+    <div id="appDialog" class="dialog-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" tabindex="-1">
+        <div class="dialog-panel">
+            <div class="dialog-header">
+                <h3 class="dialog-title" id="dialogTitle"></h3>
+                <button type="button" class="dialog-close" id="dialogClose" aria-label="Schließen">✕</button>
+            </div>
+            <div class="dialog-body">
+                <div class="dialog-message" id="dialogMessage"></div>
+                <div class="dialog-input hidden" id="dialogInputWrap">
+                    <label class="dialog-input-label" id="dialogInputLabel" for="dialogInput"></label>
+                    <input id="dialogInput" type="text" autocomplete="off" />
+                </div>
+                <div class="dialog-custom" id="dialogCustom"></div>
+            </div>
+            <div class="dialog-actions" id="dialogActions">
+                <button type="button" class="btn" id="dialogCancel">Abbrechen</button>
+                <button type="button" class="btn primary" id="dialogConfirm">Okay</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-setup.js"></script>
+    <script src="dialog.js"></script>
+    <script src="learn.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
